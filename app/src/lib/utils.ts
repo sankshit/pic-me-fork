@@ -1,9 +1,3 @@
-export function getExtension(fileName: string): string | undefined {
-  const idx = fileName.lastIndexOf('.')
-  if (idx === -1) return undefined
-  return fileName.slice(idx + 1).toLowerCase()
-}
-
 export function normalizeTargetMime(originalMime: string, target?: string): string {
   if (!target || target === 'original') return originalMime || 'application/octet-stream'
   switch (target) {
@@ -62,30 +56,28 @@ export function computeResize(
   return { width: targetMaxWidth, height: targetMaxHeight, sx, sy, sWidth, sHeight }
 }
 
-export function drawImageToCanvas(
-  image: CanvasImageSource,
-  width: number,
-  height: number,
-  opts?: { background?: string; draw?: (ctx: CanvasRenderingContext2D) => void }
-): HTMLCanvasElement {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-  if (opts?.background) {
-    ctx.fillStyle = opts.background
-    ctx.fillRect(0, 0, width, height)
-  }
-  if (image instanceof HTMLImageElement || image instanceof SVGImageElement || image instanceof HTMLCanvasElement || image instanceof ImageBitmap) {
-    ctx.drawImage(image as any, 0, 0, width, height)
-  } else if (opts?.draw) {
-    opts.draw(ctx)
-  }
-  return canvas
-}
-
 export function isSvgMime(mime?: string): boolean {
   return mime === 'image/svg+xml' || mime === 'image/svg'
+}
+
+export function mimeToExtension(mime: string): string {
+  switch (mime) {
+    case 'image/png':
+      return 'png'
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    case 'image/svg+xml':
+    case 'image/svg':
+      return 'svg'
+    case 'image/gif':
+      return 'gif'
+    case 'image/bmp':
+      return 'bmp'
+    default:
+      return 'bin'
+  }
 }
 
 

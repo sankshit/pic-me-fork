@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import type { ConvertResult } from '../types'
+import { mimeToExtension } from '../lib/utils'
 
 type Row = {
   id: string
@@ -21,8 +22,9 @@ export default function BatchTable({ rows }: Props) {
       const dataUrl = row.result.dataUrl
       const comma = dataUrl.indexOf(',')
       const base64 = dataUrl.slice(comma + 1)
-      const ext = row.result.mime.split('/')[1] || 'txt'
-      zip.file(`${row.name}.${ext}`, base64, { base64: true })
+      const ext = mimeToExtension(row.result.mime)
+      const baseName = row.name.replace(/\.[^.]+$/, '')
+      zip.file(`${baseName}.${ext}`, base64, { base64: true })
     })
     const blob = await zip.generateAsync({ type: 'blob' })
     const url = URL.createObjectURL(blob)

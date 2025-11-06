@@ -14,7 +14,7 @@ export default function ImageDropzone({ onFiles }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg', '.heic', '.heif']
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg']
     },
     multiple: true,
   })
@@ -55,7 +55,7 @@ export default function ImageDropzone({ onFiles }: Props) {
         </svg>
       </div>
       <p className="text-xl font-semibold">Drop images, click to browse, or paste</p>
-      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">PNG, JPEG, WEBP, GIF, BMP, SVG, HEIC/HEIF</p>
+      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">PNG, JPEG, WEBP, GIF, BMP, SVG</p>
       <div className={clsx('pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-gradient-to-t from-sky-500/5 to-transparent transition-opacity', isDragActive ? 'opacity-100' : 'opacity-0')} />
     </div>
   )

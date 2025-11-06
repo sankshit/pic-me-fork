@@ -32,7 +32,6 @@ Images never leave your device. Conversion is 100% client-side.
 ### Supported formats
 - Raster: PNG, JPEG, WEBP, GIF, BMP
 - Vector: SVG (pass-through as Base64)
-- HEIC/HEIF: best-effort (requires browser support; optional lib included)
 
 ### License
 MIT

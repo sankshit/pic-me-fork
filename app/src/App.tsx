@@ -5,9 +5,13 @@ import Preview from './components/Preview'
 import ResultCard from './components/ResultCard'
 import BatchTable from './components/BatchTable'
 import type { ConvertOptions, ConvertResult } from './types'
-import { convertFileToBase64 } from './lib/convert'
+
 
 type BatchRow = { id: string; name: string; result?: ConvertResult; error?: string }
+
+type WorkerMessage = { id: string; ok: boolean; result?: ConvertResult; error?: string }
+
+type PendingCallback = (msg: WorkerMessage) => void
 
 export default function App() {
   const [options, setOptions] = useState<ConvertOptions>({ targetFormat: 'original', quality: 0.92, resize: { fit: 'contain' } })
@@ -15,6 +19,7 @@ export default function App() {
   const [currentResult, setCurrentResult] = useState<ConvertResult | null>(null)
   const [batchRows, setBatchRows] = useState<BatchRow[]>([])
   const workerRef = useRef<Worker | null>(null)
+  const pendingRef = useRef<Map<string, PendingCallback>>(new Map())
   const [installPromptEvent, setInstallPromptEvent] = useState<any>(null)
   const [installed, setInstalled] = useState(false)
   const debounceTimer = useRef<number | null>(null)
@@ -23,8 +28,17 @@ export default function App() {
 
   useEffect(() => {
     const w = new Worker(new URL('./lib/worker/convertWorker.ts', import.meta.url), { type: 'module' })
+    const onMessage = (ev: MessageEvent<WorkerMessage>) => {
+      const msg = ev.data
+      const cb = pendingRef.current.get(msg.id)
+      if (cb) {
+        pendingRef.current.delete(msg.id)
+        cb(msg)
+      }
+    }
+    w.addEventListener('message', onMessage as any)
     workerRef.current = w
-    return () => { w.terminate(); workerRef.current = null }
+    return () => { w.removeEventListener('message', onMessage as any); w.terminate(); workerRef.current = null; pendingRef.current.clear() }
   }, [])
 
   useEffect(() => {
@@ -50,15 +64,26 @@ export default function App() {
     }
   }
 
+  function postToWorker(id: string, file: File, opts: ConvertOptions, cb: PendingCallback) {
+    const w = workerRef.current
+    if (!w) return
+    pendingRef.current.set(id, cb)
+    w.postMessage({ id, file, options: opts })
+  }
+
   async function convertSingle(file: File) {
     setIsUpdating(true)
-    try {
-      const result = await convertFileToBase64(file, options)
-      setCurrentResult(result)
-    } catch (e: any) {
-      setCurrentResult({ dataUrl: '', mime: 'text/plain', sizeBytes: 0, fileName: file.name })
-      alert(`Failed to convert ${file.name}: ${e?.message ?? e}`)
-    } finally { setIsUpdating(false) }
+    const id = `single-${Date.now()}`
+    postToWorker(id, file, options, (msg) => {
+      try {
+        if (msg.ok && msg.result) {
+          setCurrentResult(msg.result)
+        } else {
+          setCurrentResult({ dataUrl: '', mime: 'text/plain', sizeBytes: 0, fileName: file.name })
+          alert(`Failed to convert ${file.name}: ${msg.error}`)
+        }
+      } finally { setIsUpdating(false) }
+    })
   }
 
   function convertBatch(files: File[], reuseRows = false) {
@@ -66,17 +91,12 @@ export default function App() {
       ? batchRows.map((r) => ({ ...r, updating: true }))
       : files.map((f, i) => ({ id: `${Date.now()}-${i}`, name: f.name, updating: true }))
     setBatchRows(rows)
-    const w = workerRef.current
-    if (!w) return
-    const pending = new Map<string, number>()
-    w.onmessage = (ev: MessageEvent<any>) => {
-      const msg = ev.data as { id: string; ok: boolean; result?: ConvertResult; error?: string }
-      setBatchRows((prev) => prev.map((r, idx) => idx === (pending.get(msg.id) ?? -1) ? ({ ...r, result: msg.result, error: msg.ok ? undefined : msg.error, updating: false }) : r))
-    }
+
     files.forEach((file, idx) => {
       const id = rows[idx].id
-      pending.set(id, idx)
-      w.postMessage({ id, file, options })
+      postToWorker(id, file, options, (msg) => {
+        setBatchRows((prev) => prev.map((r, i) => i === idx ? ({ ...r, result: msg.result, error: msg.ok ? undefined : msg.error, updating: false }) : r))
+      })
     })
   }
 

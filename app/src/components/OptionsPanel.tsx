@@ -22,8 +22,8 @@ export default function OptionsPanel({ value, onChange }: Props) {
   return (
     <div className="grid gap-6">
       <div className="rounded-xl ring-1 ring-slate-200 dark:ring-slate-800 bg-white/70 dark:bg-white/5 p-4">
-        <div className="text-sm font-medium mb-2">Format</div>
-        <div className="flex flex-wrap gap-2">
+        <div id={idFormat} className="text-sm font-medium mb-2">Format</div>
+        <div role="group" aria-labelledby={idFormat} className="flex flex-wrap gap-2">
           {['original','png','jpeg','webp','svg'].map((fmt) => (
             <button key={fmt} className={(value.targetFormat ?? 'original') === fmt ? 'px-3 py-1.5 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm' : 'px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm'} onClick={() => update({ targetFormat: fmt as any })}>
               {fmt.toUpperCase()}
@@ -74,7 +74,7 @@ export default function OptionsPanel({ value, onChange }: Props) {
               <label htmlFor={idFit} className="block text-sm font-medium mb-1">Fit</label>
               <select id={idFit} className="w-full rounded-md bg-white/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2"
                 value={value.resize?.fit ?? 'contain'}
-                onChange={(e) => update({ resize: { ...value.resize, fit: e.target.value as any } })}
+                onChange={(e) => update({ resize: { ...value.resize, fit: (e.target.value as any) } })}
               >
                 <option value="contain">Contain</option>
                 <option value="cover">Cover</option>

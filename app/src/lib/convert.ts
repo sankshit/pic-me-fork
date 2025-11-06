@@ -5,41 +5,72 @@ async function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return await file.arrayBuffer()
 }
 
-async function readFileAsText(file: File): Promise<string> {
-  const decoder = new TextDecoder()
-  const buf = await file.arrayBuffer()
-  return decoder.decode(buf)
-}
-
-function textToDataUrl(text: string, mime = 'text/plain'): string {
-  const encoded = typeof btoa !== 'undefined' ? btoa(unescape(encodeURIComponent(text))) : Buffer.from(text, 'utf8').toString('base64')
-  return `data:${mime};base64,${encoded}`
+async function readFileAsDataURL(file: File | Blob): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => resolve(String(reader.result))
+    reader.readAsDataURL(file)
+  })
 }
 
 async function blobToImageBitmap(blob: Blob): Promise<ImageBitmap> {
   return await createImageBitmap(blob)
 }
 
+function extractMimeFromDataUrl(dataUrl: string): string {
+  const semi = dataUrl.indexOf(';')
+  if (dataUrl.startsWith('data:') && semi > 5) return dataUrl.slice(5, semi)
+  return 'application/octet-stream'
+}
+
+function clampCanvasMime(requested: string): 'image/png' | 'image/jpeg' | 'image/webp' {
+  return requested === 'image/jpeg' || requested === 'image/webp' ? requested : 'image/png'
+}
+
+function isDomAvailable(): boolean {
+  return typeof document !== 'undefined' && typeof (document as any).createElement === 'function'
+}
+
+function createCanvas(width: number, height: number): { canvas: HTMLCanvasElement | OffscreenCanvas; ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D } {
+  if (typeof OffscreenCanvas !== 'undefined' && !isDomAvailable()) {
+    const canvas = new OffscreenCanvas(width, height)
+    const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D
+    return { canvas, ctx }
+  }
+  // DOM fallback
+  const canvas = (document as Document).createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+  return { canvas, ctx }
+}
+
+async function canvasToDataURL(canvas: HTMLCanvasElement | OffscreenCanvas, type: string, quality?: number): Promise<string> {
+  const anyCanvas = canvas as any
+  if (typeof anyCanvas.convertToBlob === 'function') {
+    const blob = await (anyCanvas as OffscreenCanvas).convertToBlob({ type, quality })
+    return await readFileAsDataURL(blob)
+  }
+  return (canvas as HTMLCanvasElement).toDataURL(type, quality)
+}
+
 export async function convertFileToBase64(file: File, options: ConvertOptions = {}): Promise<ConvertResult> {
   const originalMime = file.type || 'application/octet-stream'
-  const targetMime = normalizeTargetMime(originalMime, options.targetFormat)
+  const targetMimeRequested = normalizeTargetMime(originalMime, options.targetFormat)
 
   // SVG passthrough (or to svg target)
   if (isSvgMime(originalMime) && (options.targetFormat === 'svg' || options.targetFormat === 'original' || !options.targetFormat)) {
-    const text = await readFileAsText(file)
-    const dataUrl = textToDataUrl(text, 'image/svg+xml')
-    return { dataUrl, mime: 'image/svg+xml', sizeBytes: estimateBase64SizeBytes(dataUrl), fileName: file.name }
+    const dataUrl = await readFileAsDataURL(file)
+    return { dataUrl, mime: extractMimeFromDataUrl(dataUrl), sizeBytes: estimateBase64SizeBytes(dataUrl), fileName: file.name }
   }
 
   // If no transform required and file is already base64-friendly, read as data URL directly
   if (options.targetFormat === 'original' || (!options.targetFormat && originalMime.startsWith('image/'))) {
-    // We still may need to resize or apply background if jpeg with alpha; handle via canvas when resize/background provided
-    const needsCanvas = Boolean(options.resize) || (targetMime === 'image/jpeg')
+    const needsCanvas = Boolean(options.resize) || (targetMimeRequested === 'image/jpeg')
     if (!needsCanvas) {
-      const buf = await readFileAsArrayBuffer(file)
-      const base64 = typeof btoa !== 'undefined' ? btoa(String.fromCharCode(...new Uint8Array(buf))) : Buffer.from(buf).toString('base64')
-      const dataUrl = `data:${originalMime};base64,${base64}`
-      return { dataUrl, mime: originalMime, sizeBytes: estimateBase64SizeBytes(dataUrl), fileName: file.name }
+      const dataUrl = await readFileAsDataURL(file)
+      return { dataUrl, mime: extractMimeFromDataUrl(dataUrl), sizeBytes: estimateBase64SizeBytes(dataUrl), fileName: file.name }
     }
   }
 
@@ -48,8 +79,9 @@ export async function convertFileToBase64(file: File, options: ConvertOptions = 
   let bitmap: ImageBitmap
   try {
     bitmap = await blobToImageBitmap(blob)
-  } catch {
-    // Fallback to HTMLImageElement if createImageBitmap not available for this type
+  } catch (err) {
+    // Fallback to HTMLImageElement only if DOM available; otherwise rethrow
+    if (!isDomAvailable()) throw err
     const url = URL.createObjectURL(blob)
     bitmap = await new Promise((resolve, reject) => {
       const img = new Image()
@@ -69,19 +101,20 @@ export async function convertFileToBase64(file: File, options: ConvertOptions = 
   const fit = options.resize?.fit ?? 'contain'
   const { width, height, sx, sy, sWidth, sHeight } = computeResize(srcW, srcH, options.resize?.maxWidth, options.resize?.maxHeight, fit)
 
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-  if (targetMime === 'image/jpeg' && options.background) {
-    ctx.fillStyle = options.background
-    ctx.fillRect(0, 0, width, height)
+  const { canvas, ctx } = createCanvas(width, height)
+
+  const requestedCanvasMime = clampCanvasMime(targetMimeRequested)
+  const shouldCompositeBackground = requestedCanvasMime === 'image/jpeg'
+  if (shouldCompositeBackground) {
+    ;(ctx as any).fillStyle = options.background ?? '#ffffff'
+    ;(ctx as any).fillRect(0, 0, width, height)
   }
-  ctx.drawImage(bitmap, sx, sy, sWidth, sHeight, 0, 0, width, height)
+  ;(ctx as any).drawImage(bitmap as any, sx, sy, sWidth, sHeight, 0, 0, width, height)
 
   const quality = typeof options.quality === 'number' ? options.quality : 0.92
-  const dataUrl = canvas.toDataURL(targetMime, quality)
-  return { dataUrl, mime: targetMime, sizeBytes: estimateBase64SizeBytes(dataUrl), width, height, fileName: file.name }
+  const dataUrl = await canvasToDataURL(canvas, requestedCanvasMime, quality)
+  const actualMime = extractMimeFromDataUrl(dataUrl)
+  return { dataUrl, mime: actualMime, sizeBytes: estimateBase64SizeBytes(dataUrl), width, height, fileName: file.name }
 }
 
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ConvertResult } from '../types'
 import clsx from 'clsx'
+import { mimeToExtension } from '../lib/utils'
 
 type Props = {
   result: ConvertResult
@@ -10,6 +11,7 @@ type Props = {
 export default function ResultCard({ result, isUpdating }: Props) {
   const [copied, setCopied] = useState(false)
   const base64 = useMemo(() => result.dataUrl, [result.dataUrl])
+  const ext = useMemo(() => mimeToExtension(result.mime), [result.mime])
 
   async function copy() {
     try {
@@ -34,7 +36,7 @@ export default function ResultCard({ result, isUpdating }: Props) {
   function downloadImage() {
     const a = document.createElement('a')
     a.href = base64
-    a.download = `${result.fileName || 'image'}`
+    a.download = `${(result.fileName || 'image').replace(/\.[^.]+$/, '')}.${ext}`
     document.body.appendChild(a)
     a.click()
     a.remove()

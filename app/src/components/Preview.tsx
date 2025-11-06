@@ -1,9 +1,16 @@
+import { useEffect, useMemo } from 'react'
+
 type Props = {
   file: File
 }
 
 export default function Preview({ file }: Props) {
-  const url = URL.createObjectURL(file)
+  const url = useMemo(() => URL.createObjectURL(file), [file])
+  useEffect(() => {
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [url])
   const isSvg = file.type === 'image/svg+xml'
   return (
     <div className="flex items-center gap-4 p-3 rounded-lg bg-white/60 dark:bg-white/5 border border-slate-200 dark:border-slate-800">
