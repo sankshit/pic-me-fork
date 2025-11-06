@@ -41,7 +41,21 @@ export default function BatchTable({ rows }: Props) {
     <div className="rounded-2xl ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden bg-white/70 dark:bg-white/5">
       <div className="flex items-center justify-between p-3 bg-slate-50/60 dark:bg-slate-900/50">
         <div className="text-sm text-slate-600 dark:text-slate-300">Batch results</div>
-        <button className="px-3 py-2 rounded-md text-sm bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" onClick={exportZip}>Export ZIP</button>
+        {(() => {
+          const readyCount = rows.filter((r) => !!r.result).length
+          const disabled = readyCount === 0
+          return (
+            <button
+              className="px-3 py-2 rounded-md text-sm bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={exportZip}
+              disabled={disabled}
+              aria-disabled={disabled}
+              title={disabled ? 'No converted files to export yet' : 'Download all converted files as ZIP'}
+            >
+              Export ZIP{readyCount ? ` (${readyCount})` : ''}
+            </button>
+          )
+        })()}
       </div>
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
         {rows.map((row) => (

@@ -3,6 +3,20 @@
 @layer base {
   :root {
     color-scheme: light dark;
+    /* Design tokens */
+    --radius-sm: 0.375rem; /* 6px */
+    --radius-md: 0.5rem;   /* 8px */
+    --radius-lg: 0.75rem;  /* 12px */
+    --radius-xl: 1rem;     /* 16px */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.06);
+    --shadow-md: 0 8px 24px rgb(0 0 0 / 0.08);
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+    --dur-slow: 320ms;
+    --ease-out: cubic-bezier(0.17, 0.67, 0.19, 1);
+    --ease-in-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --focus-ring: 2px solid rgb(59 130 246 / 0.6); /* sky-500 */
   }
   html, body, #root {
     height: 100%;
@@ -10,10 +24,58 @@
   body {
     @apply antialiased bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
   }
+
+  /* Focus visibility */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Smooth transitions, respect reduced motion */
+  * {
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-out);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+      animation: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
   .container-responsive {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+}
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%) scaleX(0.4); }
+  50% { transform: translateX(20%) scaleX(0.7); }
+  100% { transform: translateX(100%) scaleX(0.4); }
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(14,165,233,0.0) 0%, rgba(14,165,233,0.8) 50%, rgba(14,165,233,0.0) 100%);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+.progress-bar::before {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 50%;
+  background: linear-gradient(90deg, rgba(14,165,233,0.0) 0%, rgba(14,165,233,1) 50%, rgba(14,165,233,0.0) 100%);
+  animation: progress-indeterminate var(--dur-slow) var(--ease-in-out) infinite;
 }

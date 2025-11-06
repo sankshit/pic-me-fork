@@ -1,5 +1,5 @@
 export function normalizeTargetMime(originalMime: string, target?: string): string {
-  if (!target || target === 'original') return originalMime || 'application/octet-stream'
+  if (!target || target === 'original' || target === 'base64') return originalMime || 'application/octet-stream'
   switch (target) {
     case 'png':
       return 'image/png'

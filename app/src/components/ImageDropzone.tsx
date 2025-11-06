@@ -46,6 +46,7 @@ export default function ImageDropzone({ onFiles }: Props) {
         isDragActive ? 'ring-sky-400/60' : 'ring-slate-300/60 dark:ring-slate-700/60',
       )}
       aria-label="Upload images by dropping, clicking or pasting"
+      aria-describedby="dropzone-hint"
     >
       <input {...getInputProps()} aria-label="Choose image files" />
       <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -56,6 +57,9 @@ export default function ImageDropzone({ onFiles }: Props) {
       </div>
       <p className="text-xl font-semibold">Drop images, click to browse, or paste</p>
       <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">PNG, JPEG, WEBP, GIF, BMP, SVG</p>
+      <p id="dropzone-hint" className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+        Tip: Press <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-300/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/30">Ctrl<span aria-hidden>+</span>V</span>/<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-300/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/30">⌘<span aria-hidden>+</span>V</span> to paste from clipboard
+      </p>
       <div className={clsx('pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-gradient-to-t from-sky-500/5 to-transparent transition-opacity', isDragActive ? 'opacity-100' : 'opacity-0')} />
     </div>
   )

@@ -7,14 +7,14 @@ import BatchTable from './components/BatchTable'
 import type { ConvertOptions, ConvertResult } from './types'
 
 
-type BatchRow = { id: string; name: string; result?: ConvertResult; error?: string }
+type BatchRow = { id: string; name: string; result?: ConvertResult; error?: string; updating?: boolean }
 
 type WorkerMessage = { id: string; ok: boolean; result?: ConvertResult; error?: string }
 
 type PendingCallback = (msg: WorkerMessage) => void
 
 export default function App() {
-  const [options, setOptions] = useState<ConvertOptions>({ targetFormat: 'original', quality: 0.92, resize: { fit: 'contain' } })
+  const [options, setOptions] = useState<ConvertOptions>({ targetFormat: 'base64', quality: 0.92, resize: { fit: 'contain' } })
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [currentResult, setCurrentResult] = useState<ConvertResult | null>(null)
   const [batchRows, setBatchRows] = useState<BatchRow[]>([])
@@ -25,6 +25,7 @@ export default function App() {
   const debounceTimer = useRef<number | null>(null)
   const convertingRef = useRef(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     const w = new Worker(new URL('./lib/worker/convertWorker.ts', import.meta.url), { type: 'module' })
@@ -80,7 +81,7 @@ export default function App() {
           setCurrentResult(msg.result)
         } else {
           setCurrentResult({ dataUrl: '', mime: 'text/plain', sizeBytes: 0, fileName: file.name })
-          alert(`Failed to convert ${file.name}: ${msg.error}`)
+          setToast(`Failed to convert ${file.name}: ${msg.error}`)
         }
       } finally { setIsUpdating(false) }
     })
@@ -96,6 +97,9 @@ export default function App() {
       const id = rows[idx].id
       postToWorker(id, file, options, (msg) => {
         setBatchRows((prev) => prev.map((r, i) => i === idx ? ({ ...r, result: msg.result, error: msg.ok ? undefined : msg.error, updating: false }) : r))
+        if (!msg.ok) {
+          setToast(`Failed to convert ${file.name}: ${msg.error}`)
+        }
       })
     })
   }
@@ -119,8 +123,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options])
 
+  const currentMime = selectedFiles.length === 1 ? selectedFiles[0].type : undefined
+
+  const isBusy = isUpdating || batchRows.some((r) => r.updating)
+
   return (
     <div className="min-h-dvh bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      {isBusy && <div className="progress-bar" aria-hidden />}
       <div className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/40 backdrop-blur">
         <div className="container-responsive py-4 flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-semibold">Pic Me</h1>
@@ -133,42 +142,59 @@ export default function App() {
         </div>
       </div>
 
-      <main className="container-responsive py-10 space-y-10">
-        <section>
-          <ImageDropzone onFiles={handleFiles} />
-        </section>
+      <main className="container-responsive py-10">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-7 space-y-10">
+            <section>
+              <ImageDropzone onFiles={handleFiles} />
+            </section>
 
-        <section aria-label="Options" className="space-y-4">
-          <h2 className="text-lg font-medium">Options</h2>
-          <OptionsPanel value={options} onChange={setOptions} />
-        </section>
+            {selectedFiles.length > 0 && (
+              <section aria-label="Selection" className="space-y-3">
+                <h2 className="text-lg font-medium">Selected</h2>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {selectedFiles.map((f, i) => <Preview key={i} file={f} />)}
+                </div>
+              </section>
+            )}
+          </div>
 
-        {selectedFiles.length > 0 && (
-          <section aria-label="Selection" className="space-y-3">
-            <h2 className="text-lg font-medium">Selected</h2>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-              {selectedFiles.map((f, i) => <Preview key={i} file={f} />)}
+          <div className="lg:col-span-5 mt-10 lg:mt-0">
+            <div className="lg:sticky lg:top-24 space-y-10">
+              <section aria-label="Options" className="space-y-4">
+                <h2 className="text-lg font-medium">Options</h2>
+                <OptionsPanel value={options} onChange={setOptions} currentMime={currentMime} />
+              </section>
+
+              {!hasBatch && currentResult && (
+                <section aria-label="Result" className="space-y-3">
+                  <h2 className="text-lg font-medium">Result</h2>
+                  <ResultCard result={currentResult} isUpdating={isUpdating} />
+                </section>
+              )}
+
+              {hasBatch && (
+                <section aria-label="Batch results" className="space-y-3">
+                  <BatchTable rows={batchRows} />
+                </section>
+              )}
             </div>
-          </section>
-        )}
-
-        {!hasBatch && currentResult && (
-          <section aria-label="Result" className="space-y-3">
-            <h2 className="text-lg font-medium">Result</h2>
-            <ResultCard result={currentResult} isUpdating={isUpdating} />
-          </section>
-        )}
-
-        {hasBatch && (
-          <section aria-label="Batch results" className="space-y-3">
-            <BatchTable rows={batchRows} />
-          </section>
-        )}
+          </div>
+        </div>
       </main>
 
       <footer className="py-8 text-center text-sm text-slate-500">
         All processing happens locally in your browser. Works offline.
       </footer>
+
+      {toast && (
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg text-sm bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800/50">
+          <div className="flex items-center gap-3">
+            <span>{toast}</span>
+            <button className="px-2 py-1 rounded-md bg-white/10 dark:bg-slate-900/10 hover:bg-white/20" onClick={() => setToast(null)} aria-label="Dismiss notification">Dismiss</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

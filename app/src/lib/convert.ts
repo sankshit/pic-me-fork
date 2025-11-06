@@ -60,13 +60,13 @@ export async function convertFileToBase64(file: File, options: ConvertOptions = 
   const targetMimeRequested = normalizeTargetMime(originalMime, options.targetFormat)
 
   // SVG passthrough (or to svg target)
-  if (isSvgMime(originalMime) && (options.targetFormat === 'svg' || options.targetFormat === 'original' || !options.targetFormat)) {
+  if (isSvgMime(originalMime) && (options.targetFormat === 'svg' || options.targetFormat === 'original' || options.targetFormat === 'base64' || !options.targetFormat)) {
     const dataUrl = await readFileAsDataURL(file)
     return { dataUrl, mime: extractMimeFromDataUrl(dataUrl), sizeBytes: estimateBase64SizeBytes(dataUrl), fileName: file.name }
   }
 
   // If no transform required and file is already base64-friendly, read as data URL directly
-  if (options.targetFormat === 'original' || (!options.targetFormat && originalMime.startsWith('image/'))) {
+  if (options.targetFormat === 'original' || options.targetFormat === 'base64' || (!options.targetFormat && originalMime.startsWith('image/'))) {
     const needsCanvas = Boolean(options.resize) || (targetMimeRequested === 'image/jpeg')
     if (!needsCanvas) {
       const dataUrl = await readFileAsDataURL(file)

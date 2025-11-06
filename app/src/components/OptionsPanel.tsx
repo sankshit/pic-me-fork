@@ -1,12 +1,14 @@
 import { useId, useState } from 'react'
 import type { ConvertOptions } from '../types'
 
+
 type Props = {
   value: ConvertOptions
   onChange: (value: ConvertOptions) => void
+  currentMime?: string
 }
 
-export default function OptionsPanel({ value, onChange }: Props) {
+export default function OptionsPanel({ value, onChange, currentMime }: Props) {
   const idFormat = useId()
   const idQuality = useId()
   const idMaxW = useId()
@@ -19,27 +21,65 @@ export default function OptionsPanel({ value, onChange }: Props) {
     onChange({ ...value, ...partial })
   }
 
+  const svgLike = currentMime === 'image/svg+xml' || currentMime === 'image/svg'
+  const isPng = currentMime === 'image/png'
+  const isJpeg = currentMime === 'image/jpeg'
+  const isWebp = currentMime === 'image/webp'
+
+  const fmts: Array<{ key: ConvertOptions['targetFormat']; label: string; disabled?: boolean }> = [
+    { key: 'base64', label: 'BASE64', disabled: false },
+    { key: 'png', label: 'PNG', disabled: !!currentMime && isPng },
+    { key: 'jpeg', label: 'JPEG', disabled: !!currentMime && isJpeg },
+    { key: 'webp', label: 'WEBP', disabled: !!currentMime && isWebp },
+    { key: 'svg', label: 'SVG', disabled: !!currentMime && !svgLike },
+  ]
+
   return (
     <div className="grid gap-6">
       <div className="rounded-xl ring-1 ring-slate-200 dark:ring-slate-800 bg-white/70 dark:bg-white/5 p-4">
         <div id={idFormat} className="text-sm font-medium mb-2">Format</div>
         <div role="group" aria-labelledby={idFormat} className="flex flex-wrap gap-2">
-          {['original','png','jpeg','webp','svg'].map((fmt) => (
-            <button key={fmt} className={(value.targetFormat ?? 'original') === fmt ? 'px-3 py-1.5 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm' : 'px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm'} onClick={() => update({ targetFormat: fmt as any })}>
-              {fmt.toUpperCase()}
-            </button>
-          ))}
+          {fmts.map(({ key, label, disabled }) => {
+            const selected = (value.targetFormat ?? 'base64') === key
+            return (
+              <button
+                key={String(key)}
+                disabled={!!disabled}
+                className={selected ? 'px-3 py-1.5 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm disabled:opacity-50 disabled:cursor-not-allowed' : 'px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed'}
+                onClick={() => !disabled && update({ targetFormat: key as any })}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       <div className="rounded-xl ring-1 ring-slate-200 dark:ring-slate-800 bg-white/70 dark:bg-white/5 p-4 grid gap-4">
         <div>
-          <label htmlFor={idQuality} className="block text-sm font-medium mb-1">Quality ({Math.round(((value.quality ?? 0.92) * 100))}%)</label>
-          <input id={idQuality} type="range" min={0.1} max={1} step={0.01} className="w-full"
-            value={value.quality ?? 0.92}
-            onChange={(e) => update({ quality: Number(e.target.value) })}
-          />
-          <p className="text-xs text-slate-500 mt-1">JPEG/WEBP only.</p>
+          {(() => {
+            const selectedFormat = value.targetFormat ?? 'base64'
+            const isQualityApplicable = selectedFormat === 'jpeg' || selectedFormat === 'webp'
+            return (
+              <div>
+                <label htmlFor={idQuality} className="block text-sm font-medium mb-1">Quality ({Math.round(((value.quality ?? 0.92) * 100))}%)</label>
+                <input
+                  id={idQuality}
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.01}
+                  className="w-full disabled:opacity-50"
+                  value={value.quality ?? 0.92}
+                  onChange={(e) => update({ quality: Number(e.target.value) })}
+                  disabled={!isQualityApplicable}
+                  aria-disabled={!isQualityApplicable}
+                  title={isQualityApplicable ? 'Adjust output quality' : 'Quality applies to JPEG and WEBP only'}
+                />
+                <p className="text-xs text-slate-500 mt-1">{isQualityApplicable ? 'Affects JPEG/WEBP file size & fidelity.' : 'Quality applies to JPEG/WEBP only.'}</p>
+              </div>
+            )
+          })()}
         </div>
 
         <div>
