@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 
-type ToolKey = 'convert' | 'favicon'
+type ToolKey = 'convert' | 'favicon' | 'diff'
 
 type Props = {
   active: ToolKey
@@ -31,6 +31,17 @@ export default function Sidebar({ active, onSelect }: Props) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
             <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M9 12h6M12 9v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        }
+      />
+      <ToolButton
+        label="Code Diff"
+        description="World-class code differ"
+        active={active === 'diff'}
+        onClick={() => onSelect('diff')}
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M8 5h8M4 9h8M12 13h8M8 17h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         }
       />

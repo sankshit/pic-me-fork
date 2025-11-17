@@ -6,6 +6,7 @@ import ResultCard from './components/ResultCard'
 import BatchTable from './components/BatchTable'
 import Sidebar from './components/Sidebar'
 import FaviconGenerator from './components/FaviconGenerator'
+import CodeDiffer from './components/CodeDiffer'
 import type { ConvertOptions, ConvertResult } from './types'
 import { Analytics } from "@vercel/analytics/react"
 
@@ -21,7 +22,7 @@ export default function App() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [currentResult, setCurrentResult] = useState<ConvertResult | null>(null)
   const [batchRows, setBatchRows] = useState<BatchRow[]>([])
-  const [activeTool, setActiveTool] = useState<'convert' | 'favicon'>('convert')
+  const [activeTool, setActiveTool] = useState<'convert' | 'favicon' | 'diff'>('convert')
   const workerRef = useRef<Worker | null>(null)
   const pendingRef = useRef<Map<string, PendingCallback>>(new Map())
   const [installPromptEvent, setInstallPromptEvent] = useState<any>(null)
@@ -194,8 +195,10 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : activeTool === 'favicon' ? (
               <FaviconGenerator />
+            ) : (
+              <CodeDiffer />
             )}
           </div>
         </div>
