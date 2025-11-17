@@ -7,6 +7,8 @@ import BatchTable from './components/BatchTable'
 import Sidebar from './components/Sidebar'
 import FaviconGenerator from './components/FaviconGenerator'
 import CodeDiffer from './components/CodeDiffer'
+import JsonFormatter from './components/JsonFormatter'
+import CodeMinifier from './components/CodeMinifier'
 import type { ConvertOptions, ConvertResult } from './types'
 import { Analytics } from "@vercel/analytics/react"
 
@@ -22,7 +24,7 @@ export default function App() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [currentResult, setCurrentResult] = useState<ConvertResult | null>(null)
   const [batchRows, setBatchRows] = useState<BatchRow[]>([])
-  const [activeTool, setActiveTool] = useState<'convert' | 'favicon' | 'diff'>('convert')
+  const [activeTool, setActiveTool] = useState<'convert' | 'favicon' | 'diff' | 'json' | 'minify'>('convert')
   const workerRef = useRef<Worker | null>(null)
   const pendingRef = useRef<Map<string, PendingCallback>>(new Map())
   const [installPromptEvent, setInstallPromptEvent] = useState<any>(null)
@@ -131,7 +133,16 @@ export default function App() {
   const currentMime = selectedFiles.length === 1 ? selectedFiles[0].type : undefined
 
   const isBusy = isUpdating || batchRows.some((r) => r.updating)
-  const pageTitle = activeTool === 'convert' ? 'Image Converter' : activeTool === 'favicon' ? 'Favicon Generator' : 'Code Diff Tool'
+  const pageTitle =
+    activeTool === 'convert'
+      ? 'Image Converter'
+      : activeTool === 'favicon'
+      ? 'Favicon Generator'
+      : activeTool === 'diff'
+      ? 'Code Diff Tool'
+      : activeTool === 'json'
+      ? 'JSON Formatter'
+      : 'Code Minifier'
 
   return (
     <div className="min-h-dvh bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -210,8 +221,12 @@ export default function App() {
               </div>
             ) : activeTool === 'favicon' ? (
               <FaviconGenerator />
-            ) : (
+            ) : activeTool === 'diff' ? (
               <CodeDiffer />
+            ) : activeTool === 'json' ? (
+              <JsonFormatter />
+            ) : (
+              <CodeMinifier />
             )}
           </div>
         </div>
