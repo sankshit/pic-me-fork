@@ -7,6 +7,7 @@ import BatchTable from './components/BatchTable'
 import Sidebar from './components/Sidebar'
 import FaviconGenerator from './components/FaviconGenerator'
 import type { ConvertOptions, ConvertResult } from './types'
+import { Analytics } from "@vercel/analytics/next"
 
 
 type BatchRow = { id: string; name: string; result?: ConvertResult; error?: string; updating?: boolean }
@@ -212,6 +213,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   )
 }
