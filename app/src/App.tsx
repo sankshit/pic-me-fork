@@ -175,7 +175,6 @@ export default function App() {
                 <div className="lg:col-span-5 mt-10 lg:mt-0">
                   <div className="lg:sticky lg:top-24 space-y-10">
                     <section aria-label="Options" className="space-y-4">
-                      <h2 className="text-lg font-medium">Options</h2>
                       <OptionsPanel value={options} onChange={setOptions} currentMime={currentMime} />
                     </section>
 

@@ -83,7 +83,6 @@ export default function FaviconGenerator() {
       <div className="lg:col-span-5 mt-10 lg:mt-0">
         <div className="lg:sticky lg:top-24 space-y-10">
           <section aria-label="Options" className="space-y-4">
-            <h2 className="text-lg font-medium">Favicon Options</h2>
             <div className="rounded-xl ring-1 ring-slate-200 dark:ring-slate-800 bg-white/70 dark:bg-white/5 p-4 grid gap-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium">Sizes</div>
