@@ -137,7 +137,7 @@ export default function App() {
       {activeTool === 'convert' && isBusy && <div className="progress-bar" aria-hidden />}
       <div className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/40 backdrop-blur">
         <div className="container-responsive py-4 flex items-center justify-between">
-          <h1 className="text-xl sm:text-2xl font-semibold">Pic Me</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">Dev Toolkit</h1>
           <div className="flex items-center gap-3">
             {installPromptEvent && !installed && (
               <button className="px-3 py-2 rounded-md text-sm bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" onClick={async () => { await installPromptEvent.prompt?.(); setInstallPromptEvent(null) }}>Install</button>

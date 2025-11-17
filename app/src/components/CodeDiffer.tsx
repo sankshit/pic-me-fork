@@ -7,6 +7,8 @@ type LanguageKey =
   | 'plaintext'
   | 'javascript'
   | 'typescript'
+  | 'javascriptreact'
+  | 'typescriptreact'
   | 'json'
   | 'css'
   | 'html'
@@ -30,6 +32,17 @@ export default function CodeDiffer() {
   const [originalEditable, setOriginalEditable] = useState<boolean>(true)
   const [language, setLanguage] = useState<LanguageKey>('auto')
   const [isDark, setIsDark] = useState<boolean>(false)
+  const [wordWrap, setWordWrap] = useState<boolean>(false)
+  const [showMinimap, setShowMinimap] = useState<boolean>(true)
+  const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true)
+  const [renderWhitespace, setRenderWhitespace] = useState<'none' | 'boundary' | 'selection' | 'all'>('none')
+  const [fontSize, setFontSize] = useState<number>(14)
+  const [diffAlgo, setDiffAlgo] = useState<'advanced' | 'legacy'>('advanced')
+  const [tabSize, setTabSize] = useState<number>(2)
+  const [insertSpaces, setInsertSpaces] = useState<boolean>(true)
+  const [showIndicators, setShowIndicators] = useState<boolean>(true)
+  const [showOverviewRuler, setShowOverviewRuler] = useState<boolean>(true)
+  const [editorRef, setEditorRef] = useState<any>(null)
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
@@ -43,6 +56,14 @@ export default function CodeDiffer() {
     if (language !== 'auto') return [language, language]
     return [inferLanguage(leftName, left), inferLanguage(rightName, right)]
   }, [language, leftName, rightName, left, right])
+
+  useEffect(() => {
+    if (!editorRef) return
+    const modelOriginal = editorRef.getOriginalEditor().getModel()
+    const modelModified = editorRef.getModifiedEditor().getModel()
+    modelOriginal?.updateOptions({ tabSize, insertSpaces })
+    modelModified?.updateOptions({ tabSize, insertSpaces })
+  }, [tabSize, insertSpaces, editorRef])
 
   function handleFileChange(which: 'left' | 'right', file?: File | null) {
     if (!file) return
@@ -72,7 +93,6 @@ export default function CodeDiffer() {
   return (
     <div className="space-y-6">
       <section aria-label="Inputs" className="space-y-3">
-        <h2 className="text-lg font-medium">Code Diff</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border bg-white/70 dark:bg-white/5 border-slate-200 dark:border-slate-800 p-3 space-y-2">
             <div className="flex items-center justify-between gap-3">
@@ -166,13 +186,90 @@ export default function CodeDiffer() {
               onChange={(e) => setLanguage(e.target.value as LanguageKey)}
             >
               {languageOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
           </div>
         </div>
+
+        <details className="rounded-lg border bg-white/70 dark:bg-white/5 border-slate-200 dark:border-slate-800 p-3">
+          <summary className="cursor-pointer text-sm font-medium leading-7">More options</summary>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={wordWrap} onChange={(e) => setWordWrap(e.target.checked)} />
+              Word wrap
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showMinimap} onChange={(e) => setShowMinimap(e.target.checked)} />
+              Minimap
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showLineNumbers} onChange={(e) => setShowLineNumbers(e.target.checked)} />
+              Line numbers
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showIndicators} onChange={(e) => setShowIndicators(e.target.checked)} />
+              Diff indicators
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showOverviewRuler} onChange={(e) => setShowOverviewRuler(e.target.checked)} />
+              Overview ruler
+            </label>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Whitespace</span>
+              <select
+                className="text-sm px-2 py-1 rounded-md bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800"
+                value={renderWhitespace}
+                onChange={(e) => setRenderWhitespace(e.target.value as any)}
+              >
+                <option value="none">none</option>
+                <option value="boundary">boundary</option>
+                <option value="selection">selection</option>
+                <option value="all">all</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Diff algorithm</span>
+              <select
+                className="text-sm px-2 py-1 rounded-md bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800"
+                value={diffAlgo}
+                onChange={(e) => setDiffAlgo(e.target.value as any)}
+              >
+                <option value="advanced">advanced</option>
+                <option value="legacy">legacy</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Font size</span>
+              <input
+                type="range"
+                min={10}
+                max={22}
+                step={1}
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+              />
+              <span className="tabular-nums">{fontSize}px</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Tab size</span>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={tabSize}
+                onChange={(e) => setTabSize(Math.min(8, Math.max(1, Number(e.target.value) || 2)))}
+                className="w-20 rounded-md bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-2 py-1"
+              />
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={insertSpaces} onChange={(e) => setInsertSpaces(e.target.checked)} />
+              Use spaces for tabs
+            </label>
+          </div>
+        </details>
       </section>
 
       <section aria-label="Diff">
@@ -183,7 +280,7 @@ export default function CodeDiffer() {
           style={{ height: '70vh' }}
         >
           <DiffEditor
-            theme={isDark ? 'vs-dark' : 'light'}
+            theme={isDark ? 'vs-dark' : 'vs'}
             original={left}
             modified={right}
             originalLanguage={originalLanguage}
@@ -194,17 +291,25 @@ export default function CodeDiffer() {
               readOnly: false,
               originalEditable,
               automaticLayout: true,
-              diffAlgorithm: 'advanced',
+              diffAlgorithm: diffAlgo,
               scrollBeyondLastLine: false,
-              renderIndicators: true,
-              minimap: { enabled: true },
+              renderIndicators: showIndicators,
+              minimap: { enabled: showMinimap },
+              wordWrap: wordWrap ? 'on' : 'off',
+              lineNumbers: showLineNumbers ? 'on' : 'off',
+              renderWhitespace,
+              fontSize,
+              overviewRulerLanes: showOverviewRuler ? 3 : 0,
             }}
-            onMount={(editor, monaco) => {
+            onMount={(editor, _monaco) => {
               // Keep editor and textareas in sync for bidirectional editing
               const modelOriginal = editor.getOriginalEditor().getModel()
               const modelModified = editor.getModifiedEditor().getModel()
               modelOriginal?.onDidChangeContent(() => setLeft(modelOriginal.getValue()))
               modelModified?.onDidChangeContent(() => setRight(modelModified.getValue()))
+              modelOriginal?.updateOptions({ tabSize, insertSpaces })
+              modelModified?.updateOptions({ tabSize, insertSpaces })
+              setEditorRef(editor)
             }}
           />
         </div>
@@ -213,33 +318,37 @@ export default function CodeDiffer() {
   )
 }
 
-const languageOptions: LanguageKey[] = [
-  'auto',
-  'plaintext',
-  'javascript',
-  'typescript',
-  'json',
-  'css',
-  'html',
-  'python',
-  'go',
-  'java',
-  'csharp',
-  'cpp',
-  'rust',
-  'yaml',
-  'markdown',
-  'bash',
+const languageOptions: { value: LanguageKey; label: string }[] = [
+  { value: 'auto', label: 'Auto-detect' },
+  { value: 'plaintext', label: 'Plain text' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'javascriptreact', label: 'React (JSX)' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'typescriptreact', label: 'React (TSX)' },
+  { value: 'json', label: 'JSON' },
+  { value: 'css', label: 'CSS' },
+  { value: 'html', label: 'HTML' },
+  { value: 'python', label: 'Python' },
+  { value: 'go', label: 'Go' },
+  { value: 'java', label: 'Java' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'cpp', label: 'C/C++' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'yaml', label: 'YAML' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'bash', label: 'Bash' },
 ]
 
 function inferLanguage(name: string, content: string): LanguageKey {
   const ext = (name.split('.').pop() || '').toLowerCase()
   switch (ext) {
-    case 'ts':
     case 'tsx':
+      return 'typescriptreact'
+    case 'jsx':
+      return 'javascriptreact'
+    case 'ts':
       return 'typescript'
     case 'js':
-    case 'jsx':
       return 'javascript'
     case 'json':
       return 'json'
